@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<script src="jquery-2.1.1.js"></script>
+	<script type="text/javascript">
+		var layoutParam = {
+			width : '100%',
+			colproportion : '1:3:1:3',
+			cols : [
+				{
+	        		title : "column1",
+	        		colspan : 1,
+	        		rowspan : 1,
+	        		innerHTML : "<input style='width:100%;height:100%;'></input>"
+	        	}
+	        	,{
+	        		title : "column2",
+	        		colspan : 1,
+	        		rowspan : 2,
+	        		innerHTML : "<textarea style='width:100%;height:36px;'></textarea>"
+	        	}
+	        	,{
+	        		title : "column3",
+	        		colspan : 1,
+	        		rowspan : 1,
+	        		innerHTML : "<input style='width:100%;height:100%;'></input>"
+	        	}
+	        	,{
+	        		title : "column4",
+	        		colspan : 2,
+	        		rowspan : 1,
+	        		innerHTML : "<input style='width:100%;height:100%;'></input>"
+	        	}
+	        	,{
+	        		title : "column5",
+	        		colspan : 1,
+	        		rowspan : 2,
+	        		innerHTML : "<textarea style='width:100%;height:36px;'></textarea>"
+	        	},{
+	        		title : "column6",
+	        		colspan : 1,
+	        		rowspan : 1,
+	        		innerHTML : "<input style='width:100%;height:100%;'></input>"
+	        	}
+	        	,{
+	        		title : "column7",
+	        		colspan : 1,
+	        		rowspan : 1,
+	        		innerHTML : "<input style='width:100%;height:100%;'></input>"
+	        	}
+	        	,{
+	        		title : "column5",
+	        		colspan : 2,
+	        		rowspan : 2,
+	        		innerHTML : "<textarea style='width:100%;height:36px;'></textarea>"
+	        	},{
+	        		title : "column5",
+	        		colspan : 2,
+	        		rowspan : 2,
+	        		innerHTML : "<textarea style='width:100%;height:36px;'></textarea>"
+	        	}
+	        ]
+        };
+
+        function renderTable(){
+	    	//debugger;
+	    	//整个布局想象成一个矩阵，要做的就是把一个个td放到合适的位置上
+	    	var tabelHtml = "",//最终需要返回的html
+	    		columnNum = this.layoutParam.colproportion.split(":").length/2,//table的列数(不算title)
+	    		flagArr = [],//生成一个二维数组，1表示有填充 0表示无填充
+	    		rowspan,//当前td跨的行数
+	    		colspan,//当前td跨的列数
+	    		colspanReal,
+	    		addRowFlag = true;//是否能够添加一行的标志，初始行是可以添加
+	    		//this.initFlagArr(flagArr);
+	    		currentRowIndex = 0;
+	    	for(var i = 0; i < this.layoutParam.cols.length; i++){
+	    		rowspan = this.layoutParam.cols[i].rowspan,
+	    		colspan = this.layoutParam.cols[i].colspan,
+	    		titleHtml = '<td rowspan="'+rowspan+'">'+this.layoutParam.cols[i].title+'</td>';
+	    		colspanReal = colspan == 1? 1 : 2*this.layoutParam.cols[i].colspan-1;//因为title的缘故，需要转化一下
+	    		contentHtml = '<td rowspan="'+rowspan+'" colspan="'+colspanReal+'">'+this.layoutParam.cols[i].innerHTML+'</td>'
+	    		
+	    		if(addRowFlag){
+	    			tabelHtml += "<tr height='23px'>";
+	    			//设置二维数组初始化为0
+	    			//this.initFlagArr(flagArr);
+	    			addRowFlag = false;
+	    		}
+	    		//columnNum == flagArr[flagArr.length-1].length
+	    		//获取当前行
+	    		if(!flagArr[currentRowIndex]){
+					this.initFlagArr(flagArr);								
+				}
+	    		var currentRow = flagArr[currentRowIndex];
+	    		for(var j = 0; j < columnNum; j++){
+					if(currentRow[j]==0){
+						//当前位置没有td
+						if(colspan == 1){
+							//该位置可插入
+							currentRow[j] = 1;//设置该位置有值
+							tabelHtml += titleHtml + contentHtml;
+							if(rowspan > 1){
+								for(var k = 1; k < rowspan; k++){
+									if(!flagArr[currentRowIndex + k]){
+										this.initFlagArr(flagArr)
+									}
+									flagArr[currentRowIndex + k][j] = 1;
+								}
+							}
+							break;
+						}else{
+							//该td跨列了，需要判断后面的列位置标示是否为0，如果都是0可以插入
+							
+							//A:判断后面是否有足够的列
+							if(j + colspan <= columnNum){
+								//B:有足够的列让改td跨列，判断该位置后面是否有连续的colspan个空位置
+								var k;
+								for(k = j + 1; k < j + colspan; k++){
+									if(currentRow[k]==1){
+										break;
+									}
+								}
+								if(k == j + colspan){
+									//有足够的空位置，该位置可以插入
+									for(k = j; k < j + colspan; k++){
+										currentRow[k] = 1;
+									}
+									tabelHtml += titleHtml + contentHtml;
+									if(rowspan > 1){
+										for(var k = 1; k < rowspan; k++){
+											if(!flagArr[currentRowIndex + k]){
+												this.initFlagArr(flagArr)
+											}
+											for(var m = j; m < j + colspan; m++){
+												flagArr[currentRowIndex + k][m] = 1;
+											}
+										}
+									}
+									j = j + colspan -1;
+									if(j == columnNum-1){
+										//换行了...
+										tabelHtml += "</tr>";
+										addRowFlag = true;
+										currentRowIndex++;
+										break;
+									}
+								}else{
+									//该位置不能插入
+									j = j + colspan -1;
+									if(j == columnNum-1){
+										//换行了...
+										tabelHtml += "</tr>";
+										//加一个空行
+										//tabelHtml += "<tr height='23px'></tr>";
+										addRowFlag = true;
+										currentRowIndex++;
+										i--;
+										break;
+									}
+								}
+							}else{
+								//没有足够的列了，只能换行了...
+								tabelHtml += "</tr>";
+								addRowFlag = true;
+								currentRowIndex++;
+								i--;
+								break;
+							}
+							
+						}
+					}//TODO 这个else有问题
+					else{
+						if(j == columnNum - 1){
+							tabelHtml += "</tr>";
+							addRowFlag = true;
+							currentRowIndex++;
+							i--;
+						}
+					}
+	    		}
+	    	}
+	    	if(tabelHtml.lastIndexOf("</tr>") != tabelHtml.length-5){
+	    		tabelHtml += "</tr>";
+	    	}
+	    	return tabelHtml;
+	    }
+
+	    //数组长度+1,并初始化
+	    function initFlagArr(array){
+	    	var columnNum = this.layoutParam.colproportion.split(":").length/2;
+	    	var length = array.length;
+	    	array[length] = [];
+	    	for(var i = 0; i < columnNum; i++){
+	    		array[length][i] = 0;
+	    	}
+	    }
+
+	    function setColumnWidth(){
+	    	var colArr = this.layoutParam.colproportion.split(":");
+	    	var  allProportion = 0 ;//总比例数
+	        for(var i=0;i<colArr.length;i++){
+	        	try{
+	        		allProportion = allProportion + parseInt(colArr[i]);
+	        	}catch(e){
+	        		allProportion = allProportion + 1;
+	        	}
+	        }
+	        var realWidth = this.layoutParam.width;
+	        if(this.layoutParam.width.indexOf("%") != -1){
+	        	realWidth = this.layoutParam.width.substring(0,this.layoutParam.width.length-1);
+	        }
+	        
+	        var percentPro = realWidth/allProportion;//每个比例代表的宽度
+		    
+		    var columnWidthArr = [],//每列的实际宽度
+		        totalWidth = 0;//总宽度
+		    for(var i=0;i<colArr.length;i++){
+		    	columnWidthArr.push(colArr[i]*percentPro);
+		    	totalWidth = totalWidth + colArr[i]*percentPro;
+		    }
+		    
+		   //如果经过百分比计算之后的宽度小于或大于实际宽度，则调整最后一个editor的宽度(要加上差量)
+		   if(totalWidth != realWidth){
+		   		var diff = totalWidth - realWidth;
+		   		columnWidthArr[columnWidthArr.length-1] = columnWidthArr[columnWidthArr.length-1] - diff;
+		   }
+		   
+		     if(this.layoutParam.width.indexOf("%") != -1){
+		     	for(var i=0;i<columnWidthArr.length;i++){
+		     		columnWidthArr[i] = columnWidthArr[i]+"%";
+		     	}
+		     }
+		     return columnWidthArr;
+	    	
+	    }
+
+	    window.onload = function(){
+	    	var temp = '<table  id="tableId"  border="0"  cellpadding="0" cellspacing="0"  style="width:100%;table-layout:fixed; word-break : keep-all ; white-space : nowrap;" class="freeFormTable">'+'<tr style="height:1px;">';
+	    	var columnWidthArr = this.setColumnWidth();
+	  		
+	  		for(var i=0;i<columnWidthArr.length;i++){
+	  			temp =  temp + '<td width="'+columnWidthArr[i]+'" valign="top"></td>';
+	  		}
+	  		temp = temp + '</tr>' + this.renderTable() + '</table>';
+	    	$("body")[0].innerHTML=temp;
+	    }
+	    
+	</script>
+</head>
+<body>
+	
+</body>
+</html>
